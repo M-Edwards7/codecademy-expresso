@@ -3,8 +3,8 @@ const db = new sqlite3.Database(process.env.TEST_DATABASE || './database.sqlite'
 
 
 const sqlEmployees = `
-  DROP TABLE IF EXISTS Employees;
-  CREATE TABLE Employees (
+  DROP TABLE IF EXISTS Employee;
+  CREATE TABLE Employee (
     id INTEGER PRIMARY KEY,
     name TEXT NOT NULL,
     position TEXT NOT NULL,
@@ -14,34 +14,34 @@ const sqlEmployees = `
 `;
 
 const sqlTimesheets = `
-  DROP TABLE IF EXISTS Timesheets;
-  CREATE TABLE Timesheets (
+  DROP TABLE IF EXISTS Timesheet;
+  CREATE TABLE Timesheet (
     id INTEGER PRIMARY KEY,
     hours INTEGER NOT NULL,
     rate INTEGER NOT NULL,
     date INTEGER NOT NULL,
-    employee_id INTEGER,
+    employee_id INTEGER NOT NULL,
     FOREIGN KEY(employee_id) REFERENCES Employees(id)
   );
 `;
 
 const sqlMenus = `
-  DROP TABLE IF EXISTS Menus;
-  CREATE TABLE Menus (
+  DROP TABLE IF EXISTS Menu;
+  CREATE TABLE Menu (
     id INTEGER PRIMARY KEY,
     title TEXT NOT NULL
   );
 `;
 
 const sqlMenuItems = `
-  DROP TABLE IF EXISTS MenuItems;
-  CREATE TABLE MenuItems (
+  DROP TABLE IF EXISTS MenuItem;
+  CREATE TABLE MenuItem (
     id INTEGER PRIMARY KEY,
     name TEXT NOT NULL,
     description TEXT,
     inventory INTEGER NOT NULL,
     price INTEGER NOT NULL,
-    menu_id INTEGER,
+    menu_id INTEGER NOT NULL,
     FOREIGN KEY(menu_id) REFERENCES Menus(id)
   );
 `;
