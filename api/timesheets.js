@@ -2,10 +2,11 @@ const express = require('express');
 const timesheetRouter = express.Router({ mergeParams: true });
 
 const sqlite3 = require('sqlite3');
+const fetchRowById = require('./helperfunctions');
 const db = new sqlite3.Database(process.env.TEST_DATABASE || './database.sqlite');
 
 timesheetRouter.param('timesheetId', (req, res, next, timesheetId) => {
-    fetchTimesheetById(timesheetId, next, (timesheet) => {
+    fetchRowById('Timesheet', timesheetId, next, (timesheet) => {
         if (!timesheet) return res.sendStatus(404);
         req.timesheet = timesheet;
         next();
@@ -36,7 +37,7 @@ timesheetRouter.post('/', (req, res, next) => {
 
     db.run(sql, values, function (err) {
         if (err) return next(err);
-        fetchTimesheetById(this.lastID, next, (timesheet) => {
+        fetchRowById('Timesheet', this.lastID, next, (timesheet) => {
             res.status(201).json({ timesheet: timesheet });
         });
     });
@@ -44,25 +45,27 @@ timesheetRouter.post('/', (req, res, next) => {
 
 timesheetRouter.put('/:timesheetId', (req, res, next) => {
     const { hours, rate, date } = req.body.timesheet;
+    const employeeId = req.params.employeeId;
     const timesheetId = req.params.timesheetId;
-    const sql = `UPDATE Timesheet SET hours = $hours, rate = $rate, date = $date WHERE id = $timesheetId`;
+    const sql = `UPDATE Timesheet SET hours = $hours, rate = $rate, date = $date WHERE employee_id = $employeeId and id = $timesheetId`;
     const values = {
         $hours: hours,
         $rate: rate,
         $date: date,
+        $employeeId: employeeId,
         $timesheetId: timesheetId
     }
-    fetchTimesheetById(timesheetId, next, (timesheet) => {
+    fetchRowById('Timesheet', timesheetId, next, (timesheet) => {
         if (!timesheet) return res.sendStatus(404);
     });
 
     if (!hours || !rate || !date) return res.sendStatus(400);
 
-    db.run(sql, values, function(err){
-        if(err) return next(err);
-        fetchTimesheetById(timesheetId, next, (timesheet) => {
-            res.status(200).json({timesheet: timesheet})
-        })  
+    db.run(sql, values, function (err) {
+        if (err) return next(err);
+        fetchRowById('Timesheet', timesheetId, next, (timesheet) => {
+            res.status(200).json({ timesheet: timesheet })
+        })
     })
 });
 
@@ -70,25 +73,14 @@ timesheetRouter.delete('/:timesheetId', (req, res, next) => {
     const timesheetId = req.params.timesheetId;
     const sql = `DELETE FROM Timesheet WHERE id = ?`;
     const value = [timesheetId];
-    fetchTimesheetById(timesheetId, next, (timesheet)=>{
-        if(!timesheet) return res.sendStatus(404);
+    fetchRowById('Timesheet', timesheetId, next, (timesheet) => {
+        if (!timesheet) return res.sendStatus(404);
     });
 
-    db.run(sql, value, function(err){
-        if(err) return next(err);
+    db.run(sql, value, function (err) {
+        if (err) return next(err);
         res.sendStatus(204);
     })
 })
-
-//helper function
-function fetchTimesheetById(id, next, callback) {
-    const sql = `SELECT * FROM Timesheet WHERE id = ?`;
-    const values = [id];
-    db.get(sql, values, (err, timesheet) => {
-        if (err) return next(err);
-        callback(timesheet || null);
-    });
-};
-
 
 module.exports = timesheetRouter;

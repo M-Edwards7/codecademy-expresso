@@ -1,13 +1,14 @@
 const express = require('express');
 const sqlite3 = require('sqlite3');
 const timesheetRouter = require('./timesheets');
+const fetchRowById = require('./helperfunctions');
 
 const db = new sqlite3.Database(process.env.TEST_DATABASE || './database.sqlite');
 const employeesRouter = express.Router();
 
 
 employeesRouter.param('employeeId', (req, res, next, employeeId) => {
-    fetchEmployeeById(employeeId, next, (employee) => {
+    fetchRowById('Employee',employeeId, next, (employee) => {
         if (!employee) return res.sendStatus(404);
         req.employee = employee;
         next();
@@ -70,7 +71,7 @@ employeesRouter.put('/:employeeId', (req, res, next) => {
     };
     db.run(sql, values, function (err) {
         if (err) return next(err);
-        fetchEmployeeById(id, next, (employee) => {
+        fetchRowById('Employee', id, next, (employee) => {
             res.status(200).json({ employee: employee })
         })
     })
@@ -83,20 +84,10 @@ employeesRouter.delete('/:employeeId', (req, res, next) => {
     const value = [id]
     db.run(sql, value, function (err) {
         if (err) return next(err);
-        fetchEmployeeById(id, next, (employee) => {
+        fetchRowById('Employee', id, next, (employee) => {
             return res.status(200).send({ employee: employee })
         })
     })
 });
-
-//helper functions
-function fetchEmployeeById(id, next, callback) {
-    const sql = `SELECT * FROM Employee WHERE id = ?`;
-    const values = [id];
-    db.get(sql, values, (err, employee) => {
-        if (err) return next(err);
-        callback(employee || null);
-    });
-};
 
 module.exports = employeesRouter;
