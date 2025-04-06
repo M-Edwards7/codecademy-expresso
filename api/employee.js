@@ -1,16 +1,20 @@
 const express = require('express');
 const sqlite3 = require('sqlite3');
+const timesheetRouter = require('./timesheets');
 
 const db = new sqlite3.Database(process.env.TEST_DATABASE || './database.sqlite');
 const employeesRouter = express.Router();
 
 
 employeesRouter.param('employeeId', (req, res, next, employeeId) => {
-    fetchEmployeeById(employeeId, res, next, (employee) => {
+    fetchEmployeeById(employeeId, next, (employee) => {
+        if (!employee) return res.sendStatus(404);
         req.employee = employee;
         next();
     });
 });
+
+employeesRouter.use('/:employeeId/timesheets', timesheetRouter);
 
 employeesRouter.get('/', (req, res, next) => {
     const sql = `SELECT * FROM Employee WHERE is_current_employee = 1`;
@@ -28,9 +32,8 @@ employeesRouter.get('/:employeeId', (req, res, next) => {
 
 employeesRouter.post('/', (req, res, next) => {
     const { name, position, wage } = req.body.employee;
-    if (!name || !wage || !position) {
-        res.sendStatus(400);
-    }
+    if (!name || !wage || !position) return res.sendStatus(400);
+
     const sql = ` INSERT INTO Employee (name, position, wage)
         VALUES ($name, $position, $wage) `;
     const values = {
@@ -67,7 +70,7 @@ employeesRouter.put('/:employeeId', (req, res, next) => {
     };
     db.run(sql, values, function (err) {
         if (err) return next(err);
-        fetchEmployeeById(id, res, next, (employee) => {
+        fetchEmployeeById(id, next, (employee) => {
             res.status(200).json({ employee: employee })
         })
     })
@@ -78,28 +81,22 @@ employeesRouter.delete('/:employeeId', (req, res, next) => {
     const id = req.params.employeeId;
     const sql = `UPDATE Employee SET is_current_employee = 0 WHERE id = ?`;
     const value = [id]
-    db.run(sql, value, function(err){
-        if(err) return next(err);
-        fetchEmployeeById(id, res, next, (employee) => {
-           return res.status(200).send({employee: employee})
+    db.run(sql, value, function (err) {
+        if (err) return next(err);
+        fetchEmployeeById(id, next, (employee) => {
+            return res.status(200).send({ employee: employee })
         })
     })
 });
 
-
-
 //helper functions
-function fetchEmployeeById(id, res, next, callback) {
+function fetchEmployeeById(id, next, callback) {
     const sql = `SELECT * FROM Employee WHERE id = ?`;
     const values = [id];
     db.get(sql, values, (err, employee) => {
         if (err) return next(err);
-        if (!employee) return res.sendStatus(404);
-        callback(employee);
+        callback(employee || null);
     });
 };
-
-
-
 
 module.exports = employeesRouter;
